@@ -11,9 +11,10 @@ audio/*.ogg
 audio/*.opus
 audio/*.aac
 
-# installer build artefacts - both are reproducible from Setup.cs with
-# installer/build-installer.ps1, and the exe is published as a release asset
-installer/payload.zip
+# installer build artefacts - all reproducible with installer/msi/build-msi.ps1
+installer/payload/
+installer/*.msi
+installer/*.wixpdb
 installer/*.exe
 
 # OS noise

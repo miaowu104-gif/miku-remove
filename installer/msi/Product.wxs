@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Miku Voicebank - Windows Installer package.
+
+  A normal per-user MSI: double-click it, or
+      msiexec /i MikuVoicebank-4.0.msi
+  and it shows up in Settings > Apps like anything else.
+
+  Two things worth knowing:
+
+  * The desktop shortcut is a separate Feature, so the wizard's feature page
+    lets you tick it on or off (and "/qn ADDLOCAL=Main" installs without it).
+
+  * Uninstalling runs the show.  The PlayShow custom action fires just before
+    RemoveFiles, so msiexec sits there for five minutes while the voicebank
+    sings, and only then wipes the files.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="Miku Voicebank"
+           Manufacturer="Crypton Future Media"
+           Version="4.0.0"
+           ProductCode="{537CFFDE-4DF4-49F1-AEB6-B96FA795ECCB}"
+           UpgradeCode="{04A110C6-E188-4C33-8D39-59079A740093}"
+           Scope="perMachine"
+           InstallerVersion="500"
+           Codepage="65001"
+           Compressed="yes">
+
+    <SummaryInformation
+      Description="《初音未来的消失》，但是 winget uninstall"
+      Manufacturer="Crypton Future Media" />
+
+    <MajorUpgrade DowngradeErrorMessage="已经安装了更新的版本，请先卸载它。" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPCOMMENTS" Value="《初音未来的消失》，但是 winget uninstall" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!-- C:\Program Files\MikuVoicebank - the usual place for an MSI.  Windows
+         asks for elevation once, on install and again on uninstall. -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="MikuVoicebank" />
+    </StandardDirectory>
+
+    <!-- These resolve to the All Users locations for a per-machine install. -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="Miku Voicebank" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- ============================================================ payload -->
+    <ComponentGroup Id="PayloadFiles" Directory="INSTALLFOLDER">
+      <Files Include="..\payload\**" />
+    </ComponentGroup>
+
+    <!-- =========================================================== shortcuts -->
+    <Component Id="StartMenuShortcut" Directory="AppMenuFolder" Guid="{F2E20F0C-CEC3-4110-8E24-23700F0602BF}">
+      <Shortcut Id="StartMenuLnk"
+                Name="Miku Voicebank"
+                Description="《初音未来的消失》，但是 winget uninstall"
+                Target="[INSTALLFOLDER]MikuVoicebank.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveAppMenuFolder" Directory="AppMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKLM" Key="Software\MikuVoicebank"
+                     Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="{BAA73201-7B07-486B-930F-6E0F40C97E6C}">
+      <Shortcut Id="DesktopLnk"
+                Name="Miku Voicebank"
+                Description="《初音未来的消失》，但是 winget uninstall"
+                Target="[INSTALLFOLDER]MikuVoicebank.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RegistryValue Root="HKLM" Key="Software\MikuVoicebank"
+                     Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- ============================================================ features -->
+    <Feature Id="Main" Title="Miku Voicebank"
+             Description="演出本体、开始菜单快捷方式。"
+             Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="PayloadFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+    <Feature Id="DesktopIcon" Title="桌面快捷方式"
+             Description="在桌面上也放一个 Miku Voicebank 图标。"
+             Level="1" AllowAbsent="yes">
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+    <!-- ================================================== the show on uninstall -->
+    <!-- Type 34 custom action: run a command from a directory.  Deferred +
+         impersonated so it runs as the user and can open a console window. -->
+    <CustomAction Id="PlayShow"
+                  Directory="INSTALLFOLDER"
+                  ExeCommand="&quot;[SystemFolder]cmd.exe&quot; /c &quot;&quot;[INSTALLFOLDER]miku-remove.cmd&quot;&quot;"
+                  Execute="deferred"
+                  Impersonate="yes"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="PlayShow" Before="RemoveFiles"
+              Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND NOT MIKU_SKIP_SHOW" />
+    </InstallExecuteSequence>
+
+    <!-- UI: the feature page is what lets you untick the desktop shortcut -->
+    <ui:WixUI Id="WixUI_FeatureTree" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+  </Package>
+</Wix>

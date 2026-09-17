@@ -12,45 +12,58 @@
 
 ## 装成一个 Windows 程序（推荐）
 
-双击 **`installer\MikuVoicebank-Setup.exe`** —— 单个文件，47 KB，不用先装别的东西。
+双击 **`MikuVoicebank-4.0.msi`** —— 标准的 Windows Installer 包。
 
-向导里可以勾选要不要创建桌面快捷方式，也可以勾"安装完成后立即看一遍"。
+Windows 会问一次管理员权限（MSI 的常规行为），接着是熟悉的向导：
+许可 → **选择功能**（想不要桌面图标就把「桌面快捷方式」取消勾选）→ 开始安装。
 
-安装会做三件事：
+安装会：
 
-- 把演出装到 `%LOCALAPPDATA%\Programs\MikuVoicebank`
+- 把演出装到 `C:\Program Files\MikuVoicebank`
 - 在开始菜单（以及可选的桌面）放一个 **Miku Voicebank** 图标
-- 在「设置 → 应用 → 已安装的应用」里登记一条：
+- 由 Windows Installer 自己登记到「设置 → 应用 → 已安装的应用」：
 
 ```
-Miku Voicebank    4.0    Crypton Future Media
+Miku Voicebank    4.0.0    Crypton Future Media
 ```
 
 **运行那个图标，或者在设置里点「卸载」—— 那才是这场演出。**
-约 5 分钟后歌放完，程序才真正删掉自己：安装目录、注册表项、快捷方式全部清干净。
+约 5 分钟后歌放完，MSI 才真正删掉文件、快捷方式和注册表项。
 
-> 演出会在一个控制台窗口里跑，别急着关它。
+> 演出会在一个控制台窗口里跑，别急着关它。卸载时那个窗口就是演出本身。
 
-全程只写当前用户（`HKCU` + `%LOCALAPPDATA%`），**不会弹 UAC**。
-机器上需要有 **Node.js 18+**（演出脚本就是它跑的），没装的话安装向导会拦下来提示。
+机器上需要有 **Node.js 18+**（演出脚本就是它跑的）。
 
-### 静默安装
+### 命令行
+
+MSI 的好处就是这些开关都是系统原生的：
 
 ```bat
-MikuVoicebank-Setup.exe --silent                  :: 装，建桌面快捷方式
-MikuVoicebank-Setup.exe --silent --no-desktop     :: 装，不建桌面快捷方式
+msiexec /i MikuVoicebank-4.0.msi                      :: 图形向导
+msiexec /i MikuVoicebank-4.0.msi /qn                  :: 静默全装
+msiexec /i MikuVoicebank-4.0.msi /qn ADDLOCAL=Main    :: 静默，不建桌面快捷方式
+msiexec /x MikuVoicebank-4.0.msi                      :: 卸载（照样会演出）
+msiexec /x MikuVoicebank-4.0.msi /qn MIKU_SKIP_SHOW=1 :: 卸载但跳过演出
 ```
+
+`MIKU_SKIP_SHOW=1` 是给自动化用的——正常卸载想看的正是那场演出。
 
 ### 改了东西想重新打包
 
 改完 `src\`、`show.conf` 这些之后：
 
 ```bat
-powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
+powershell -ExecutionPolicy Bypass -File installer\msi\build-msi.ps1
 ```
 
-它会重新打 payload、重新编译出 `MikuVoicebank-Setup.exe`。
-只需要 Windows 自带的 C# 编译器，不用装 SDK 或任何打包工具。
+它会重新打 payload、编译启动器、调 WiX 生成 MSI。需要两样东西：
+
+```bat
+dotnet tool install --global wix --version 5.0.2
+```
+
+**务必用 5.x**——6 和 7 要求接受 Open Source Maintenance Fee 的 EULA，
+不接就报 `WIX7015` 直接罢工。
 
 ---
 
@@ -228,10 +241,14 @@ miku-remove\
 ├── miku-remove.cmd         入口（设置 UTF-8 代码页，然后调用 node）
 ├── show.conf               配置
 ├── installer\
-│   ├── MikuVoicebank-Setup.exe   单文件安装包（把这个给别人就行）
-│   ├── Setup.cs                  安装向导 + 卸载演出 + 自毁，都在这里
-│   ├── payload.zip               要打包进去的演出文件
-│   └── build-installer.ps1       改完之后重新生成 Setup.exe
+│   ├── MikuVoicebank-4.0.msi     标准 Windows 安装包（把这个给别人就行）
+│   ├── msi\
+│   │   ├── Product.wxs           MSI 定义：文件、功能、卸载时演出
+│   │   ├── Launcher.cs           快捷方式指向的启动器（运行即卸载）
+│   │   ├── license.rtf           向导里的许可页
+│   │   ├── guids.txt             固定的 ProductCode / UpgradeCode
+│   │   └── build-msi.ps1         改完之后重新生成 MSI
+│   └── payload\                  打包进 MSI 的演出文件（构建产物）
 ├── data\timeline.tsv       歌词时间轴（184 条）
 ├── src\
 │   ├── miku-show.mjs       演出脚本：调度、文案、进度条
