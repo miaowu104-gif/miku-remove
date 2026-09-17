@@ -1,0 +1,8 @@
+把任意音频文件放进这个目录，演出就会用它，不用改配置。
+支持的扩展名：.flac .wav .ogg .oga .opus .mp3 .m4a .aac
+
+不放进来的话，程序会用 show.conf 里的 AUDIO_URL 下载原曲到
+  %LOCALAPPDATA%\miku-voicebank\cache\
+
+注意：本仓库不含任何音频，也不会把音频打包进来。
+换别的演奏版本时，时间轴默认是对着原曲的，用 --offset 或 --calibrate 对齐。

@@ -1,0 +1,17 @@
+# nothing generated should ever land in the repo
+node_modules/
+*.log
+
+# downloaded song cache lives outside the project, but just in case
+audio/*.mp3
+audio/*.flac
+audio/*.wav
+audio/*.m4a
+audio/*.ogg
+audio/*.opus
+audio/*.aac
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store

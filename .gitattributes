@@ -1,0 +1,24 @@
+# Line endings.  Later rules win, so the general rule goes first and the
+# exceptions come after it.
+#
+# Everything is LF by default.
+* text=auto eol=lf
+
+# miku-remove.cmd MUST be CRLF even in the repository - cmd.exe mis-parses a
+# LF-only batch file (it eats the first character of every line).  "-text"
+# means "store exactly as-is", so cloning *and* downloading the zip both give
+# a working file.
+*.cmd -text
+*.bat -text
+
+# PowerShell is fine either way; keep it CRLF on checkout too.
+*.ps1 text eol=crlf
+
+# the song is never committed
+*.mp3 binary
+*.flac binary
+*.wav binary
+*.m4a binary
+*.ogg binary
+*.opus binary
+*.aac binary
