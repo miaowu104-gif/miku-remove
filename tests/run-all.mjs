@@ -12,6 +12,7 @@ const suites = [
   ['terminal layer (bytes & widths)', 'test-screen.mjs', false],
   ['full transcript fidelity', 'test-transcript.mjs', false],
   ['the [Y/n] confirm prompt', 'test-confirm.mjs', false],
+  ['pause freezes the clock', 'test-pause.mjs', true],
   ['progress style (scroll default)', 'test-style.mjs', true],
   ['live audio sync', 'test-sync.mjs', true],
   ['interrupt & cleanup', 'test-lifecycle.mjs', true],

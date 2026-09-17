@@ -399,10 +399,20 @@ class Show {
       return true;
     }
 
-    const answer = await this.readOneKey();
+    // Pause the music while we wait for the answer.  The show's clock is
+    // driven by the position the player reports, so this freezes the timeline
+    // as well - however long the answer takes, the next lyric is still lined
+    // up with the song when playback resumes.
+    if (this.audio) this.audio.pause();
+    let answer;
+    try {
+      answer = await this.readOneKey();
+    } finally {
+      if (this.audio) this.audio.resume();
+    }
+
     const yes = answer === '' || 'yY\r\n'.includes(answer);
     this.s.finishPrompt(' ' + (yes ? this.p.msg('y') : this.p.sys('n')));
-
     if (yes) return true;
 
     this.log('', 'msg');

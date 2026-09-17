@@ -91,13 +91,61 @@ try {
 Write-Output ("READY {0}" -f [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
 try { [Console]::Out.Flush() } catch { }
 
+# --- control channel --------------------------------------------------------
+# The parent writes one command per line on our stdin:
+#   pause   stop the music where it is
+#   resume  carry on from there
+#   quit    stop and exit
+# While paused we stop reporting POS: the parent fits its clock from
+# (wall clock, position) pairs, and a paused player would hand it pairs where
+# the position stands still while the clock runs, which would corrupt it.
+$stdin = $null
+$readBuf = New-Object byte[] 32
+$pendingRead = $null
+try { $stdin = [Console]::OpenStandardInput() } catch { }
+$paused = $false
+
+function PollCommand {
+  if ($null -eq $stdin) { return $null }
+  if ($null -eq $script:pendingRead) {
+    try {
+      $script:pendingRead = $stdin.BeginRead($readBuf, 0, $readBuf.Length, $null, $null)
+    } catch { $script:stdin = $null; return $null }
+  }
+  if (-not $script:pendingRead.IsCompleted) { return $null }
+  $n = 0
+  try { $n = $stdin.EndRead($script:pendingRead) } catch { }
+  $script:pendingRead = $null
+  if ($n -le 0) { $script:stdin = $null; return $null }
+  return [System.Text.Encoding]::ASCII.GetString($readBuf, 0, $n).Trim()
+}
+
 while ($true) {
   Pump
-  $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-  $pos = 0.0
-  try { $pos = $player.Position.TotalSeconds } catch { break }
-  Write-Output ("POS {0} {1:F4}" -f $now, $pos)
-  if ($duration -gt 0 -and $pos -ge ($duration - 0.05)) { break }
+
+  $cmd = PollCommand
+  if ($cmd) {
+    foreach ($one in ($cmd -split "`n")) {
+      switch ($one.Trim().ToLower()) {
+        'pause' {
+          if (-not $paused) { try { $player.Pause() } catch { }; $paused = $true }
+        }
+        'resume' {
+          if ($paused) { try { $player.Play() } catch { }; $paused = $false }
+        }
+        'quit' { $paused = $false; break }
+      }
+    }
+    if ($cmd -match 'quit') { break }
+  }
+
+  if (-not $paused) {
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $pos = 0.0
+    try { $pos = $player.Position.TotalSeconds } catch { break }
+    Write-Output ("POS {0} {1:F4}" -f $now, $pos)
+    if ($duration -gt 0 -and $pos -ge ($duration - 0.05)) { break }
+  }
   Start-Sleep -Milliseconds 150
 }
 

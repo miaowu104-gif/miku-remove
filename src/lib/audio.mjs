@@ -229,7 +229,8 @@ export class Audio {
     ];
     try {
       this.proc = spawn('powershell.exe', args, {
-        stdio: ['ignore', 'pipe', 'ignore'],
+        // stdin is the control channel: "pause" / "resume" / "quit"
+        stdio: ['pipe', 'pipe', 'ignore'],
         windowsHide: true,
       });
     } catch (e) {
@@ -322,8 +323,43 @@ export class Audio {
 
   /** Current position in the audio file, in seconds, or null if unknown. */
   position() {
-    if (this._epoch === null) return null;
+    if (this._paused) return this._pausedPos;
+    if (this._epoch === null) return this._resumePos;
     return (Date.now() - this._epoch) / 1000;
+  }
+
+  /** Stop the music where it is.
+   *
+   * The show's clock is driven by this position, so pausing freezes the whole
+   * timeline.  That is what keeps picture and sound together across the [Y/n]
+   * prompt: however long the answer takes, the next lyric is still waiting at
+   * the right moment in the song.
+   *
+   * Note this freezes the *reported* position too, not just the player: the
+   * position is extrapolated from a fitted epoch rather than read fresh, so
+   * without this it would keep climbing while the music stood still.
+   */
+  pause() {
+    this._pausedPos = this.position();
+    this._paused = true;
+    this._send('pause');
+  }
+
+  resume() {
+    this._paused = false;
+    // Playback resumes at the same file position, but the wall clock has moved
+    // on, so every sample gathered before the pause now implies a wrong epoch.
+    // Drop them and let the first fresh report re-fit; until then, hold the
+    // position we froze at so the clock does not jump.
+    this._epochSamples = [];
+    this._epoch = null;
+    this._resumePos = this._pausedPos;
+    this._send('resume');
+  }
+
+  _send(cmd) {
+    if (!this.proc || !this.proc.stdin || this.proc.stdin.destroyed) return;
+    try { this.proc.stdin.write(cmd + '\n'); } catch { }
   }
 
   alive() {
