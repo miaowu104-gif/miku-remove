@@ -19,11 +19,15 @@ check(items.length === 184, 'timeline has 184 entries', `got ${items.length}`);
 let li = 0;
 let matched = 0;
 const missing = [];
+// The [Y/n] line is a prompt: the answer gets echoed after it on the same
+// line ("... [Y/n]  y"), so an exact match is not enough for that one.
+const sameLine = (line, want) => line === want
+  || (want.endsWith('[Y/n]') && line.startsWith(want + ' '));
 for (const it of items) {
   const want = expectedLine(it);
   let found = -1;
   for (let i = li; i < lines.length; i++) {
-    if (lines[i] === want) { found = i; break; }
+    if (sameLine(lines[i], want)) { found = i; break; }
   }
   if (found < 0) missing.push(it);
   else { li = found + 1; matched++; }
@@ -91,6 +95,10 @@ const isLoose = (l) => {
   if (isComponentRow(t) || isUninstallLine(t)) return true;
   if (/^\[VOCALOID\] 声库(数据 pack\d+ 已注册 \(\d+\/\d+\)|本体 miku-voicebank-pack \(4\.0\) 已注册)$/.test(t)) return true;
   if (/^\u2588+\s+6\.62 MB \/ 6\.62 MB$/.test(t)) return true;
+  // the answered [Y/n] prompt: "... [Y/n]  y"
+  if (/主人啊.*\[Y\/n\]\s+[yYnN]$/.test(t)) return true;
+  if (/^\[VOCALOID\] 卸载已取消/.test(t)) return true;
+  if (/^\[VOCALOID\] 记忆文件保持原样/.test(t)) return true;
   return false;
 };
 const known = new Set([...items.map(expectedLine), ...fixed]);

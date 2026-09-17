@@ -165,6 +165,23 @@ export class Screen {
     this._drawFooter();
   }
 
+  /** Write a line but stay on it, so the answer can be typed on the same line.
+   *  Pair with finishPrompt(). */
+  prompt(s) {
+    this._erase();
+    this._eraseFooter();
+    this._write(s);
+    this._drawn = false;
+    this._footerDrawn = false;
+  }
+
+  /** Finish a prompt: echo what was typed, end the line, restore the footer. */
+  finishPrompt(echo = '') {
+    this._write(echo + '\n');
+    this._draw();
+    this._drawFooter();
+  }
+
   status(s) {
     if (s === this._status) {
       // scroll mode prints one line per change, so an unchanged status

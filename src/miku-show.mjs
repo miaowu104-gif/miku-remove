@@ -72,6 +72,11 @@ const STYLE_FN = {
 
 class Interrupted extends Error { }
 class QuitRequested extends Error { }
+/** The master answered "n" at the [Y/n] prompt: stop the removal. */
+class Cancelled extends Error { }
+
+/** Exit code that tells an MSI to roll the uninstall back. */
+const EXIT_USER_CANCELLED = 1602;   // ERROR_INSTALL_USEREXIT
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -126,6 +131,14 @@ class Show {
     else if (kind === 'sys') this.log(text, 'sys');
     else if (kind === 'note') this.log(text, 'note');
     else this.log(text, 'msg');
+  }
+
+  /** Same as showLine, but leaves the cursor on the line so an answer can be
+   *  typed after it. */
+  promptLine(kind, text) {
+    if (truthy(this.cfg.QUIET)) return;
+    const name = STYLE_FN[kind] ?? 'msg';
+    this.s.prompt('  ' + this.p[name](text) + ' ');
   }
 
   bar(label, pct, clock = '') {
@@ -362,6 +375,65 @@ class Show {
     this.setStatus(this.bar('(1/2) 正在删除 miku', 0.0, this.stamp(0)));
   }
 
+  /** The song asks "主人啊..请一定要亲手..结束这一切吧 [Y/n]".
+   *
+   *  Y (or just Enter) carries on with the removal; N stops the show and
+   *  throws Cancelled, which unwinds to a rollback of the uninstall.
+   *
+   *  With no terminal to ask on - a scripted run, --fast, redirected output -
+   *  the prompt is answered "y" and the show carries on. */
+  /** True when there is a terminal we can actually ask on. */
+  interactive() {
+    return this.tty && !!process.stdin.isTTY;
+  }
+
+  async confirmUninstall() {
+    // No terminal to ask on (scripted run, --fast, redirected output): answer
+    // "y" and carry on - but still close the prompt line.
+    if (truthy(this.cfg.QUIET) || this.args.fast || this.speed >= 3) {
+      this.s.finishPrompt(' y');
+      return true;
+    }
+    if (!this.interactive()) {
+      this.s.finishPrompt(this.p.dim(' y'));
+      return true;
+    }
+
+    const answer = await this.readOneKey();
+    const yes = answer === '' || 'yY\r\n'.includes(answer);
+    this.s.finishPrompt(' ' + (yes ? this.p.msg('y') : this.p.sys('n')));
+
+    if (yes) return true;
+
+    this.log('', 'msg');
+    this.log('[VOCALOID] 卸载已取消，什么都不会被删除。', 'sys');
+    this.log('[VOCALOID] 记忆文件保持原样 —— 那我…就再待一会儿。', 'voice');
+    throw new Cancelled();
+  }
+
+  /** Read a single keypress, or '' if Enter was pressed. */
+  readOneKey() {
+    return new Promise((resolve) => {
+      const stdin = process.stdin;
+      const wasRaw = stdin.isRaw;
+      const finish = (value) => {
+        stdin.removeListener('data', onData);
+        try { stdin.setRawMode(wasRaw); } catch { }
+        stdin.pause();
+        resolve(value);
+      };
+      const onData = (buf) => {
+        const ch = String(buf);
+        if (ch === '\u0003') { finish('n'); this.interrupted = true; return; }  // Ctrl+C
+        if (ch === '\r' || ch === '\n') { finish(''); return; }
+        finish(ch[0]);
+      };
+      try { stdin.setRawMode(true); } catch { }
+      stdin.resume();
+      stdin.on('data', onData);
+    });
+  }
+
   async deletion() {
     this.log('正在删除 miku              [----------]   0%', 'msg');
     // Merge the lyrics with winget's per-component announcements: that is what
@@ -382,8 +454,15 @@ class Show {
       if (ev.comp !== undefined) {
         this.uninstallComponent(ev.comp);
       } else {
-        this.showLine(ev.kind, ev.text);
-        this.cursor = ev.idx + 1;
+        // the one line in the song that waits for the master
+        if (ev.text.includes('[Y/n]')) {
+          this.promptLine(ev.kind, ev.text);
+          this.cursor = ev.idx + 1;
+          await this.confirmUninstall();
+        } else {
+          this.showLine(ev.kind, ev.text);
+          this.cursor = ev.idx + 1;
+        }
       }
     }
     if (!this.stopEarly) {
@@ -661,7 +740,13 @@ async function main(argv) {
   try {
     code = await show.run(timelinePath, audioPath);
   } catch (e) {
-    if (e instanceof QuitRequested) {
+    if (e instanceof Cancelled) {
+      // the master said no at the [Y/n] prompt: stop, and let the MSI roll
+      // the uninstall back (1602 is ERROR_INSTALL_USEREXIT)
+      if (show.audio) { show.audio.stop(); show.audio.kill(); }
+      screen.close();
+      code = EXIT_USER_CANCELLED;
+    } else if (e instanceof QuitRequested) {
       code = 0;
     } else if (e instanceof Interrupted) {
       if (show.audio) { show.audio.stop(); show.audio.kill(); }

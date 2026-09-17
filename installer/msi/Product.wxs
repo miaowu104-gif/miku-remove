@@ -94,15 +94,19 @@
       <ComponentRef Id="DesktopShortcut" />
     </Feature>
 
-    <!-- ================================================== the show on uninstall -->
-    <!-- Type 34 custom action: run a command from a directory.  Deferred +
-         impersonated so it runs as the user and can open a console window. -->
+    <!-- The show on uninstall.
+         The launcher's "play-show" mode opens a real console window and waits
+         for the show, because a child of msiexec would have no console:
+         nothing would be visible and the [Y/n] prompt could not be answered.
+         Return="check" means a non-zero exit rolls the uninstall back - that
+         is what answering "n" at the prompt does (the show exits 1602,
+         ERROR_INSTALL_USEREXIT). -->
     <CustomAction Id="PlayShow"
                   Directory="INSTALLFOLDER"
-                  ExeCommand="&quot;[SystemFolder]cmd.exe&quot; /c &quot;&quot;[INSTALLFOLDER]miku-remove.cmd&quot;&quot;"
+                  ExeCommand="&quot;[INSTALLFOLDER]MikuVoicebank.exe&quot; --play-show"
                   Execute="deferred"
                   Impersonate="yes"
-                  Return="ignore" />
+                  Return="check" />
 
     <InstallExecuteSequence>
       <Custom Action="PlayShow" Before="RemoveFiles"
