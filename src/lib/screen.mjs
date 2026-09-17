@@ -138,6 +138,9 @@ export class Screen {
     this._drawn = false;
     this._footer = '';
     this._footerDrawn = false;
+    // "plain" output: no cursor tricks, so the text can be redirected to a
+    // file or a pipe without escape sequences moving the caret around.
+    this.plain = false;
     if (stream && typeof stream.on === 'function') {
       stream.on('error', () => { this.broken = true; });
     }
@@ -202,7 +205,7 @@ export class Screen {
   footer(s) {
     if (s === this._footer) return;
     this._footer = s;
-    if (this.style === 'off' || this.broken) return;
+    if (this.plain || this.style === 'off' || this.broken) return;
     this._eraseFooter();
     this._drawFooter();
   }
@@ -228,7 +231,7 @@ export class Screen {
   }
 
   _drawFooter() {
-    if (!this._footer || this.style === 'off' || this.broken) return;
+    if (this.plain || !this._footer || this.style === 'off' || this.broken) return;
     this._write('\r\x1b[K' + clip(this._footer, this.cols() - 1));
     this._footerDrawn = true;
   }

@@ -99,29 +99,62 @@ miku-remove.cmd --check       :: 只报告歌曲 / 时间轴 / 播放器的状�
 ## 命令行
 
 ```
-miku-remove.cmd [--audio 文件] [--timeline 文件] [--conf 文件]
-                [--offset 秒] [--start 秒] [--speed 倍率]
-                [--status inline|scroll|off] [--no-audio] [--no-color]
-                [--fast] [--calibrate] [--check] [--fetch-audio]
-                [--stop-audio] [--quiet] [--to-stdout] [--version]
+miku-remove.cmd [-h] [--version] [--audio 文件] [--timeline 文件]
+                [--conf 文件] [--offset 秒] [--start 秒] [--speed 倍率]
+                [--status inline|scroll|off] [--install-pace 毫秒]
+                [--no-audio] [--no-winget] [--no-install] [--no-color]
+                [--quiet] [--to-stdout] [--force] [--fast] [--calibrate]
+                [--check] [--fetch-audio] [--stop-audio]
 ```
+
+`miku-remove.cmd --help` 也能打印同一份清单。
+
+### 通用
+
+| 开关 | 作用 |
+| --- | --- |
+| `-h`、`--help` | 显示帮助 |
+| `--version` | 显示版本号 |
+
+### 歌曲与时间轴
 
 | 开关 | 作用 |
 | --- | --- |
 | `--audio 文件` | 指定歌曲文件（不指定就用缓存里的） |
-| `--offset 秒` | 歌词整体平移，用来微调对齐 |
+| `--timeline 文件` | 指定歌词时间轴（默认 `data\timeline.tsv`） |
+| `--offset 秒` | 歌词整体平移，用来微调对齐；负数 = 歌词提前 |
 | `--start 秒` | 从歌曲第几秒开始播（配合 `--speed` 可以快速跳到结尾看） |
 | `--speed 倍率` | 演出速度，仅测试用，例如 `--speed 40` |
-| `--status` | 进度条样式：`scroll`（默认，每秒一行往上刷）/ `inline` 只有固定在最后一行的一条状态栏 / `off` |
-| `--no-audio` | 只打印歌词，不放声音 |
-| `--no-winget` | 不演出 winget 那部分，只留 `[VOCALOID]` 和歌词 |
-| `--no-install` | 跳过开头的 `winget install`，直接从 `winget uninstall` 开始 |
-| `--install-pace 毫秒` | 安装阶段每步的间隔（默认 `120` ≈ 6 秒；`60` ≈ 3 秒；`0` = 一次打完） |
 | `--calibrate` | 边听边用 `[` `]` 微调 0.1 秒、`{` `}` 调 1 秒，`s` 保存，`q` 放弃 |
-| `--check` | 只报告设置，不改动任何东西 |
+| `--no-audio` | 只打印歌词，不放声音 |
 | `--fetch-audio` | 只把歌下载到缓存然后退出 |
-| `--stop-audio` | 杀掉还在唱歌的播放器然后退出 |
+
+### 演出内容
+
+| 开关 | 作用 |
+| --- | --- |
+| `--install-pace 毫秒` | 安装阶段每步的停顿（**默认 `30`** ≈ 1.6 秒；`120` ≈ 6.5 秒；`0` = 一次打完） |
+| `--no-install` | 跳过开头的 `winget install`，直接从 `winget uninstall` 开始 |
+| `--no-winget` | 不演出 winget 那部分，只留 `[VOCALOID]` 和歌词 |
+
+### 画面
+
+| 开关 | 作用 |
+| --- | --- |
+| `--status` | 进度条样式：`scroll`（默认，每秒一行往上刷）/ `inline` 只有固定在最后一行的一条状态栏 / `off` |
+| `--no-color` | 关闭颜色（`NO_COLOR=1` 环境变量同效） |
+| `--quiet` | 尽量少打印 |
+| `--to-stdout` | 纯文本输出：关颜色、不画底部固定进度条，方便重定向进文件；同时隐含 `--force`，被重定向时也演满全场 |
+
+### 运行方式
+
+| 开关 | 作用 |
+| --- | --- |
+| `--conf 文件` | 指定配置文件 |
+| `--force` | 输出被重定向（没有终端）时也演满全场 |
 | `--fast` | 等于 `--speed 200 --no-audio --status off` |
+| `--check` | 只报告设置，不改动任何东西 |
+| `--stop-audio` | 杀掉还在唱歌的播放器然后退出 |
 
 **中途停下**：连按 Ctrl+C。第 1 下停掉音乐并退出，第 2 下强杀播放器，第 3 下立刻返回。
 直接关掉终端窗口，歌也会跟着停。
@@ -131,13 +164,41 @@ miku-remove.cmd [--audio 文件] [--timeline 文件] [--conf 文件]
 ## 配置
 
 配置写在 `show.conf` 里。个人覆盖放 `%APPDATA%\miku-voicebank\show.conf`，
-命令行参数优先，所有键都能用 `MIKU_` 前缀的环境变量覆盖（例如 `MIKU_NO_AUDIO=1`）。
+命令行参数优先，所有键都能用 `MIKU_` 前缀的环境变量覆盖（例如 `MIKU_NO_AUDIO=1`、
+`MIKU_INSTALL_PACE=0`），这些环境变量等同于启动参数。
 
 **只读第一个存在的配置文件**，不是层层叠加；顺序是
 `--conf` → `MIKU_CONF` → `%APPDATA%\miku-voicebank\show.conf` → 程序目录里的 `show.conf`。
 
 下载缓存默认在 `%LOCALAPPDATA%\miku-voicebank\cache\`。
 把任意音频丢进程序目录下的 `audio\` 文件夹，也会被自动找到。
+
+### show.conf 全部键
+
+| 键 | 默认 | 说明 |
+| --- | --- | --- |
+| `AUDIO` | 空 | 本地歌曲路径；空 = 去 `audio\` 和缓存里找 |
+| `AUDIO_URL` | 见下 | 本地找不到时从这里下载 |
+| `AUDIO_CACHE` | 空 | 缓存目录；空 = `%LOCALAPPDATA%\miku-voicebank\cache\` |
+| `AUDIO_FETCH_TIMEOUT` | `30` | 下载超时（秒） |
+| `AUDIO_FETCH_RETRIES` | `2` | 下载失败重试次数 |
+| `PLAYER` | `auto` | 只为键名齐全保留，Windows 版只有 WPF 一种实现 |
+| `AUDIO_VOLUME` | 空 | 音量 0-100；空 = 100 |
+| `AUDIO_START` | `0` | 从歌曲第几秒开始 |
+| `AUDIO_OFFSET` | `0` | 歌词整体平移秒数 |
+| `NO_AUDIO` | `0` | `1` = 不放声音，只打印歌词 |
+| `STATUS_STYLE` | `scroll` | `scroll` / `inline` / `off` |
+| `COLOR` | `1` | `0` = 关闭颜色 |
+| `SPEED` | `1.0` | 演出速度倍率，仅测试用 |
+| `FORCE` | `0` | `1` = 没有终端也演满全场 |
+| `QUIET` | `0` | `1` = 尽量少打印 |
+| `KILL_STRAY` | `1` | `1` = 开始前先杀掉残留的旧播放进程 |
+| `PACK_COUNT` | `51` | 声库分片数（纯装饰） |
+| `TOTAL_SIZE` | `5.4 GiB` | 摘要里显示的大小（纯装饰） |
+| `WINGET` | `1` | `0` = 只留 `[VOCALOID]` 和歌词 |
+| `WINGET_INSTALL` | `1` | `0` = 跳过开头的 `winget install` |
+| `INSTALL_PACE` | `30` | 安装阶段每步停顿的毫秒数，`0` = 一次打完 |
+
 
 ---
 
@@ -235,7 +296,8 @@ Starting package uninstall...
 没有终端可问的时候（`--fast`、输出被重定向），这一句自动回答 `y`，
 不会卡住。
 
-整场约 5 分钟。嫌开头的安装过程拖沓就 `--install-pace 60`（约 3 秒）
+整场约 5 分钟。开头的安装过程默认只走 1.6 秒（`INSTALL_PACE=30`）；
+想看清每一步注册就 `--install-pace 120`（约 6.5 秒），
 或者 `--no-install` 直接跳过。
 
 两点说明：
@@ -295,7 +357,19 @@ miku-remove\
 node tests\run-all.mjs
 ```
 
-`--check` 也能一眼看出歌曲、时间轴、播放器是不是都就位。
+`--check` 也能一眼看出歌曲、时间轴、播放器是不是都就位，
+以及当前的安装节奏和 winget 开关：
+
+```
+miku-show 3.9.0   (miku-voicebank 3.9.0 / Windows)
+  config   : E:\1\miku-remove\show.conf
+  timeline : E:\1\miku-remove\data\timeline.tsv
+             184 lines, music starts at 25.60s, removal lasts 249.23s
+  audio    : C:\Users\me\AppData\Local\miku-voicebank\cache\mkrm.mp3
+             6.9 MB, 286.8s
+  player   : windows (WPF MediaPlayer, position-locked)
+  install  : pace 30ms x 54 steps ~= 1.6s, winget lines on, install act on
+```
 
 ### 装完之后想彻底删掉
 

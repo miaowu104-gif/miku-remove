@@ -10,6 +10,7 @@ const quick = process.argv.includes('--quick');
 
 const suites = [
   ['terminal layer (bytes & widths)', 'test-screen.mjs', false],
+  ['start-up options & defaults', 'test-options.mjs', false],
   ['full transcript fidelity', 'test-transcript.mjs', false],
   ['the [Y/n] confirm prompt', 'test-confirm.mjs', false],
   ['pause freezes the clock', 'test-pause.mjs', true],

@@ -273,7 +273,7 @@ class Show {
    *  voicebank itself and then the 51 voice data packs. */
   async installPhase() {
     const count = this.packCount;
-    const pace = Math.max(0, asFloat(this.cfg.INSTALL_PACE, 120));
+    const pace = Math.max(0, asFloat(this.cfg.INSTALL_PACE, 30));
     const gap = this.speed < 3 ? pace / this.speed : 0;
     const beat = async () => { if (gap) await sleep(gap); };
 
@@ -594,41 +594,62 @@ function printCheck(cfg, timelinePath, audioPath) {
     w(`             ${size.toFixed(1)} MB${dur ? `, ${dur.toFixed(1)}s` : ''}`);
   }
   w('  player   : windows (WPF MediaPlayer, position-locked)');
+  {
+    const pace = Math.max(0, asFloat(cfg.INSTALL_PACE, 30));
+    const steps = Math.max(1, parseInt(String(cfg.PACK_COUNT ?? '51'), 10) || 51) + 3;
+    w(`  install  : pace ${pace}ms x ${steps} steps`
+      + (pace ? ` ~= ${(pace * steps / 1000).toFixed(1)}s` : ' (all at once)')
+      + `, winget lines ${truthy(cfg.WINGET ?? '1') ? 'on' : 'off'}`
+      + `, install act ${truthy(cfg.WINGET_INSTALL ?? '1') ? 'on' : 'off'}`);
+  }
   if (!audioPath && !url) w('  !! no audio: lyrics will print in silence');
   return 0;
 }
 
-const HELP = `usage: miku-show [-h] [--audio AUDIO] [--timeline TIMELINE] [--conf CONF]
-                 [--offset OFFSET] [--start START] [--speed SPEED]
-                 [--status {inline,scroll,off}] [--no-audio] [--no-color]
-                 [--fast] [--calibrate] [--check] [--fetch-audio]
-                 [--stop-audio] [--quiet] [--to-stdout] [--version]
+const HELP = `usage: miku-show [-h] [--version] [--audio AUDIO] [--timeline TIMELINE]
+                 [--conf CONF] [--offset SECONDS] [--start SECONDS]
+                 [--speed RATE] [--status {inline,scroll,off}]
+                 [--install-pace MS] [--no-audio] [--no-winget]
+                 [--no-install] [--no-color] [--quiet] [--to-stdout]
+                 [--force] [--fast] [--calibrate] [--check]
+                 [--fetch-audio] [--stop-audio]
 
 播放《初音ミクの消失》，同时输出声库删除过程。
 
-options:
+通用:
   -h, --help           显示这条帮助
-  --audio AUDIO        歌曲文件
-  --timeline TIMELINE  歌词时间轴 timeline.tsv
-  --conf CONF          配置文件
-  --offset OFFSET      歌词整体平移秒数
-  --start START        从歌曲第几秒开始播放
-  --speed SPEED        演出速度倍率（测试用）
-  --status {inline,scroll,off}
-                       进度条样式
-  --no-audio           只打印歌词，不放声音
-  --no-winget          不演出 winget 那部分，只留 [VOCALOID] 和歌词
-  --no-install         跳过开头的 winget install，直接从 winget uninstall 开始
-  --install-pace 毫秒  安装阶段每步的间隔（默认 120，约 12 秒；0 = 一次打完）
-  --no-color           关闭颜色
-  --fast               一次性全部打印
-  --calibrate          边听边用 [ ] { } 调歌词偏移，s 保存
-  --check              只报告设置，不做任何改动
-  --fetch-audio        只把歌下载到缓存然后退出
-  --stop-audio         杀掉还在唱歌的播放器然后退出
-  --quiet              尽量少打印
-  --to-stdout          即使有终端也写 stdout
   --version            显示版本号
+
+歌曲与时间轴:
+  --audio AUDIO        歌曲文件（不给就在 audio\\ 和下载缓存里找）
+  --timeline TIMELINE  歌词时间轴 timeline.tsv
+  --offset OFFSET      歌词整体平移秒数（负数 = 歌词提前）
+  --start START        从歌曲第几秒开始播放
+  --speed SPEED        演出速度倍率，仅测试用（例如 40）
+  --calibrate          边听边用 [ ] { } 调歌词偏移，s 保存，q 放弃
+  --fetch-audio        只把歌下载到缓存然后退出
+
+演出内容:
+  --install-pace MS    安装阶段每步的停顿毫秒数（默认 30，约 1.6 秒；0 = 一次打完）
+  --no-install         跳过开头的 winget install，直接从 winget uninstall 开始
+  --no-winget          不演出 winget 那部分，只留 [VOCALOID] 和歌词
+
+画面:
+  --status {inline,scroll,off}
+                       进度条样式（默认 scroll：每秒新起一行往上刷）
+  --no-color           关闭颜色
+  --quiet              尽量少打印
+  --to-stdout          纯文本输出，不画底部固定进度条（重定向到文件时用）
+
+运行方式:
+  --conf CONF          指定配置文件
+  --force              输出被重定向（没有终端）时也演满全场
+  --fast               等于 --speed 200 --no-audio --status off
+  --check              只报告设置，不做任何改动
+  --stop-audio         杀掉还在唱歌的播放器然后退出
+
+配置: show.conf（%APPDATA%\\miku-voicebank\\show.conf 优先），
+      每个键都能用 MIKU_ 前缀的环境变量覆盖，例如 MIKU_NO_AUDIO=1。
 `;
 
 function parseArgs(argv) {
@@ -637,6 +658,7 @@ function parseArgs(argv) {
     'status', 'install-pace']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
+    if (a === '-h') { args.help = true; continue; }
     if (!a.startsWith('--')) { args._.push(a); continue; }
     let name = a.slice(2);
     let val = null;
@@ -681,6 +703,14 @@ async function main(argv) {
   if (args.noInstall) cfg.WINGET_INSTALL = '0';
   if (args.installPace !== undefined) cfg.INSTALL_PACE = String(args.installPace);
   if (args.quiet) cfg.QUIET = '1';
+  if (args.force) cfg.FORCE = '1';
+  if (args.toStdout) {
+    // redirect-friendly: plain scrolling text, no colours, no pinned bar,
+    // and run the whole thing even though a pipe is not a terminal
+    cfg.COLOR = '0';
+    cfg.FORCE = '1';
+    cfg.STATUS_STYLE = 'scroll';
+  }
   if (args.fast) {
     cfg.SPEED = String(Math.max(asFloat(cfg.SPEED, 1.0), 200.0));
     cfg.NO_AUDIO = '1';
@@ -729,6 +759,7 @@ async function main(argv) {
 
   const paint = new Paint(truthy(cfg.COLOR));
   const screen = new Screen(out, paint, cfg.STATUS_STYLE || 'inline');
+  if (args.toStdout) screen.plain = true;
   const show = new Show(cfg, args, out, tty, paint, screen);
 
   if (args.calibrate) {

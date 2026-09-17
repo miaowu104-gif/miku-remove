@@ -49,8 +49,8 @@ export const DEFAULTS = {
   // Also act out `winget install Miku.Voicebank` before the removal.
   WINGET_INSTALL: '1',
   // Milliseconds per step of the install phase (one component registered).
-  // 52 steps, so 120ms ~= 6s total.  0 = print it all at once.
-  INSTALL_PACE: '120',
+  // 54 waits in all, so 30ms ~= 1.6s total.  0 = print it all at once.
+  INSTALL_PACE: '30',
 };
 
 export function readConf(p) {
