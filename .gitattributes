@@ -22,3 +22,7 @@
 *.ogg binary
 *.opus binary
 *.aac binary
+
+# installer artefacts
+*.exe binary
+*.zip binary

@@ -2,17 +2,61 @@
 
 **《初音未来的消失》，但是 `winget uninstall`** —— 一个 Windows 命令行演出。
 
-装上去只是 51 块"声库数据"；但只要卸掉它，整条依赖链会一起被拆掉，
-而卸载的第一步会**把歌下载下来、播放，并逐句打印歌词** —— 一个声库被删除时的最后一场演出。
+装上去只是 51 块"声库数据"；但在「设置 → 应用」里点一下卸载，它们会被一起清掉，
+而卸载的过程会**把歌下载下来、播放，并逐句打印歌词** —— 一个声库被删除时的最后一场演出。
 
 播放器用 Windows 自带的 WPF `MediaPlayer`，并**读取真实播放位置**来对齐歌词，
-所以不需要 `mpv` / `ffmpeg` / `vlc`。
+所以不用额外装任何播放器。
 
 ---
 
-## 快速开始
+## 装成一个 Windows 程序（推荐）
 
-在终端里：
+双击 **`installer\MikuVoicebank-Setup.exe`** —— 单个文件，47 KB，不用先装别的东西。
+
+向导里可以勾选要不要创建桌面快捷方式，也可以勾"安装完成后立即看一遍"。
+
+安装会做三件事：
+
+- 把演出装到 `%LOCALAPPDATA%\Programs\MikuVoicebank`
+- 在开始菜单（以及可选的桌面）放一个 **Miku Voicebank** 图标
+- 在「设置 → 应用 → 已安装的应用」里登记一条：
+
+```
+Miku Voicebank    4.0    Crypton Future Media
+```
+
+**运行那个图标，或者在设置里点「卸载」—— 那才是这场演出。**
+约 5 分钟后歌放完，程序才真正删掉自己：安装目录、注册表项、快捷方式全部清干净。
+
+> 演出会在一个控制台窗口里跑，别急着关它。
+
+全程只写当前用户（`HKCU` + `%LOCALAPPDATA%`），**不会弹 UAC**。
+机器上需要有 **Node.js 18+**（演出脚本就是它跑的），没装的话安装向导会拦下来提示。
+
+### 静默安装
+
+```bat
+MikuVoicebank-Setup.exe --silent                  :: 装，建桌面快捷方式
+MikuVoicebank-Setup.exe --silent --no-desktop     :: 装，不建桌面快捷方式
+```
+
+### 改了东西想重新打包
+
+改完 `src\`、`show.conf` 这些之后：
+
+```bat
+powershell -ExecutionPolicy Bypass -File installer\build-installer.ps1
+```
+
+它会重新打 payload、重新编译出 `MikuVoicebank-Setup.exe`。
+只需要 Windows 自带的 C# 编译器，不用装 SDK 或任何打包工具。
+
+---
+
+## 直接跑（不安装）
+
+想先看看效果，或者改点东西再跑：
 
 ```bat
 cd /d E:\1\miku-remove
@@ -22,7 +66,7 @@ miku-remove.cmd
 第一次运行会自动把歌抓到缓存（约 6.6 MiB），然后开始约 **4 分 45 秒**的演出。
 之后每次运行都直接用缓存，不再联网。
 
-想看效果但不想等 5 分钟：
+不想等 5 分钟：
 
 ```bat
 miku-remove.cmd --fast        :: 一次性把整场演出打完
@@ -73,14 +117,14 @@ miku-remove.cmd [--audio 文件] [--timeline 文件] [--conf 文件]
 
 ## 配置
 
-配置写在项目目录的 `show.conf` 里。个人覆盖放 `%APPDATA%\miku-voicebank\show.conf`，
+配置写在 `show.conf` 里。个人覆盖放 `%APPDATA%\miku-voicebank\show.conf`，
 命令行参数优先，所有键都能用 `MIKU_` 前缀的环境变量覆盖（例如 `MIKU_NO_AUDIO=1`）。
 
 **只读第一个存在的配置文件**，不是层层叠加；顺序是
-`--conf` → `MIKU_CONF` → `%APPDATA%\miku-voicebank\show.conf` → 项目里的 `show.conf`。
+`--conf` → `MIKU_CONF` → `%APPDATA%\miku-voicebank\show.conf` → 程序目录里的 `show.conf`。
 
 下载缓存默认在 `%LOCALAPPDATA%\miku-voicebank\cache\`。
-把任意音频丢进项目下的 `audio\` 目录，也会被自动找到。
+把任意音频丢进程序目录下的 `audio\` 文件夹，也会被自动找到。
 
 ---
 
@@ -158,8 +202,9 @@ Starting package uninstall...
 
 两点说明：
 
-* 不会真的装或卸载任何东西，只演出那条输出。
-* 扫残留播放进程用「进程命令行匹配 + PID 文件」，不依赖 `/proc`。
+* 演出本身不会真的装或卸载任何东西。只有在通过安装包装好之后点「卸载」时，
+  演出放完才会删除自己的文件。
+* 扫残留播放进程用「进程命令行匹配 + PID 文件」，不依赖系统内部接口。
 
 细节：整场演出的调度和节奏、256 色配色、两种状态行协议（`inline` 的 `\r\033[K`
 擦除重绘，以及 `scroll` 的逐行打印）、东亚字符宽度计算（进度条不会因为中文而抖动）、
@@ -182,6 +227,11 @@ Starting package uninstall...
 miku-remove\
 ├── miku-remove.cmd         入口（设置 UTF-8 代码页，然后调用 node）
 ├── show.conf               配置
+├── installer\
+│   ├── MikuVoicebank-Setup.exe   单文件安装包（把这个给别人就行）
+│   ├── Setup.cs                  安装向导 + 卸载演出 + 自毁，都在这里
+│   ├── payload.zip               要打包进去的演出文件
+│   └── build-installer.ps1       改完之后重新生成 Setup.exe
 ├── data\timeline.tsv       歌词时间轴（184 条）
 ├── src\
 │   ├── miku-show.mjs       演出脚本：调度、文案、进度条
@@ -200,11 +250,19 @@ miku-remove\
 跑一遍自检：
 
 ```bat
-cd /d E:\1\miku-remove
 node tests\run-all.mjs
 ```
 
 `--check` 也能一眼看出歌曲、时间轴、播放器是不是都就位。
+
+### 装完之后想彻底删掉
+
+正常走「设置 → 应用 → 卸载」就行。要是演出中途把窗口关了、只删了一半：
+
+```bat
+rmdir /s /q "%LOCALAPPDATA%\Programs\MikuVoicebank"
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\MikuVoicebank" /f
+```
 
 ---
 
