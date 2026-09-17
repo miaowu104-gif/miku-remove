@@ -83,10 +83,14 @@ Write-Host "     $files 个文件" -ForegroundColor DarkGray
 # --- 3. wix build -----------------------------------------------------------
 Step '3/4' '构建 MSI...'
 if (Test-Path $Msi) { Remove-Item -Force $Msi }
+$loc = Join-Path $Here 'WixUI_zh-CN.wxl'
+if (-not (Test-Path $loc)) {
+  throw "找不到中文本地化文件 WixUI_zh-CN.wxl（向导界面会是英文）。"
+}
 Push-Location $Here
 try {
   & wix build Product.wxs -arch x64 -ext WixToolset.UI.wixext `
-    -d "Version=$Version" -o $Msi 2>&1 | Out-String | Write-Host
+    -loc $loc -d "Version=$Version" -o $Msi 2>&1 | Out-String | Write-Host
   if ($LASTEXITCODE -ne 0 -or -not (Test-Path $Msi)) { throw 'MSI 构建失败' }
 } finally {
   Pop-Location

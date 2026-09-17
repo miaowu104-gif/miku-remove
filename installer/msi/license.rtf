@@ -1,38 +1,35 @@
-{\rtf1\ansi\ansicpg1252\deff0\nouicompat
-{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}{\f1\fnil\fcharset0 Consolas;}}
+{\rtf1\ansi\ansicpg936\deff0\nouicompat
+{\fonttbl{\f0\fnil\fcharset134 Microsoft YaHei;}{\f1\fnil\fcharset134 Consolas;}}
 \viewkind4\uc1
 \pard\f0\fs18
 
 \b\fs24 Miku Voicebank 4.0\b0\fs18\par
 \par
-A joke program: it installs 51 blocks of "voicebank data", and uninstalling it\par
-plays \i Hatsune Miku no Shoushitsu\i0  while printing the lyrics line by line.\par
+这是一个玩梗程序：它装上去只是 51 块「声库数据」，而卸载它的时候会播放\par
+《初音ミクの消失》，并逐句打印歌词。\par
 \par
-\b What this package does\b0\par
+\b 这个安装包会做什么\b0\par
 \par
-\bullet  Copies the show into \f1 %LOCALAPPDATA%\\Programs\\MikuVoicebank\f0 .\par
-\bullet  Adds a Start menu shortcut (and a desktop one, if you leave that feature ticked).\par
-\bullet  Registers itself under Settings > Apps > Installed apps.\par
-\bullet  On uninstall, plays the show before removing anything.\par
+\bullet  把演出装到 \f1 C:\\Program Files\\MikuVoicebank\f0 。\par
+\bullet  在开始菜单放一个「Miku Voicebank」图标（桌面那个可以在「选择功能」里取消）。\par
+\bullet  由 Windows Installer 登记到「设置 → 应用 → 已安装的应用」。\par
+\bullet  卸载时先放完整场演出，放完才删除文件。\par
 \par
-\b Everything is per-user.\b0  Nothing is written outside your own profile, and no\par
-administrator rights are needed.\par
+\b 需要什么\b0\par
 \par
-\b Requirements\b0\par
+机器上需要已经装好 Node.js 18 或更高版本 —— 演出脚本就是它跑的。\par
 \par
-Node.js 18 or newer must already be installed - the show is a Node script.\par
+\b 不含任何音频\b0\par
 \par
-\b No audio is included\b0\par
+这个安装包里没有任何音乐。第一次演出时，脚本会按 \f1 show.conf\f0  里配置的地址\par
+把歌下载到 \f1 %LOCALAPPDATA%\\miku-voicebank\\cache\\\f0 。\par
+下载失败也不影响演出，只是没有声音，歌词照常打印。\par
 \par
-This package contains no music. On the first run the show downloads the song\par
-to \f1 %LOCALAPPDATA%\\miku-voicebank\\cache\\\f0  from the address configured in\par
-\f1 show.conf\f0 . If the download fails the lyrics still print, just silently.\par
+\b 版权\b0\par
 \par
-\b Copyright\b0\par
+《初音ミクの消失》版权属于 cosMo@暴走P，声音属于 Crypton Future Media。\par
+请自己买碟、别传播音频。\par
 \par
-\i Hatsune Miku no Shoushitsu\i0  is by cosMo@Bousou-P. The voice belongs to\par
-Crypton Future Media. Buy the record; do not redistribute the audio.\par
-\par
-This is a toy for making videos with. Do not use it for anything serious.\par
+这是一个给同好录视频用的玩具，别拿去干正经事。\par
 \par
 }

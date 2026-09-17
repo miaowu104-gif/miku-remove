@@ -23,6 +23,7 @@
            Version="4.0.0"
            ProductCode="{537CFFDE-4DF4-49F1-AEB6-B96FA795ECCB}"
            UpgradeCode="{04A110C6-E188-4C33-8D39-59079A740093}"
+           Language="2052"
            Scope="perMachine"
            InstallerVersion="500"
            Codepage="65001"
