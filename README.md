@@ -1,4 +1,4 @@
-# miku-remove (Windows)
+﻿# miku-remove (Windows)
 
 **《初音未来的消失》，但是 `winget uninstall`** —— 一个 Windows 命令行演出。
 
@@ -72,7 +72,7 @@ dotnet tool install --global wix --version 5.0.2
 想先看看效果，或者改点东西再跑：
 
 ```bat
-cd /d E:\1\miku-remove
+cd /d E:\deepseek\miku-remove
 miku-remove.cmd
 ```
 
@@ -362,8 +362,8 @@ node tests\run-all.mjs
 
 ```
 miku-show 3.9.0   (miku-voicebank 3.9.0 / Windows)
-  config   : E:\1\miku-remove\show.conf
-  timeline : E:\1\miku-remove\data\timeline.tsv
+  config   : E:\deepseek\miku-remove\show.conf
+  timeline : E:\deepseek\miku-remove\data\timeline.tsv
              184 lines, music starts at 25.60s, removal lasts 249.23s
   audio    : C:\Users\me\AppData\Local\miku-voicebank\cache\mkrm.mp3
              6.9 MB, 286.8s

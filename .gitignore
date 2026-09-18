@@ -17,6 +17,10 @@ installer/*.msi
 installer/*.wixpdb
 installer/*.exe
 
+# source material kept next to the repo but never shipped:
+# the reference video, the violin cover, and the notes they came from
+_source/
+
 # OS noise
 Thumbs.db
 desktop.ini
